@@ -87,13 +87,54 @@ def _save_plot_distance_by_vertex(dist: List[float], outpath: str, title: str) -
     plt.close()
 
 
+def _format_predecessor_list(preds: List[List[tuple[int, float]]]) -> str:
+    lines: List[str] = []
+    for v, items in enumerate(preds):
+        label_v = _vertex_label(v)
+        if not items:
+            lines.append(f"{label_v}: []")
+            continue
+        parts = [f"({_vertex_label(u)}, {w})" for (u, w) in items]
+        lines.append(f"{label_v}: [" + ", ".join(parts) + "]")
+    return "\n".join(lines)
+
+
+def _format_successor_list(succs: List[List[tuple[int, float]]]) -> str:
+    lines: List[str] = []
+    for u, items in enumerate(succs):
+        label_u = _vertex_label(u)
+        if not items:
+            lines.append(f"{label_u}: []")
+            continue
+        parts = [f"({_vertex_label(v)}, {w})" for (v, w) in items]
+        lines.append(f"{label_u}: [" + ", ".join(parts) + "]")
+    return "\n".join(lines)
+
+
+def _format_cost_matrix(mat: np.ndarray) -> str:
+    lines: List[str] = []
+    n = mat.shape[0]
+    header = [" "] + [_vertex_label(i) for i in range(n)]
+    lines.append("\t".join(header))
+    for i in range(n):
+        row = [_vertex_label(i)]
+        for j in range(n):
+            val = mat[i, j]
+            row.append("INF" if not np.isfinite(val) else f"{float(val)}")
+        lines.append("\t".join(row))
+    return "\n".join(lines)
+
+
 def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str, fig_dir: str) -> Dict[str, Any]:
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(fig_dir, exist_ok=True)
+    graphs_dir = os.path.join(out_dir, "graphs")
+    os.makedirs(graphs_dir, exist_ok=True)
 
     if sim_id == 1:
         edges = generate_dag_negative_costs(n=n, density=density, seed=seed)
         preds = to_predecessor_list(n, edges)
+        graph_txt = _format_predecessor_list(preds)
         t0 = perf_counter()
         dist, pred, stats_alg = shortest_paths_bellman_dag_recursive(preds, root=0)
         t1 = perf_counter()
@@ -107,6 +148,7 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     elif sim_id == 2:
         edges = generate_cyclic_nonnegative(n=n, density=density, seed=seed)
         succs = to_successor_list(n, edges)
+        graph_txt = _format_successor_list(succs)
         t0 = perf_counter()
         dist, pred, stats_alg = dijkstra_heap(succs, root=0)
         t1 = perf_counter()
@@ -120,6 +162,7 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     elif sim_id == 3:
         edges = generate_cyclic_with_negative_no_neg_cycles(n=n, density=density, seed=seed)
         mat = to_cost_matrix(n, edges)
+        graph_txt = _format_cost_matrix(mat)
         t0 = perf_counter()
         dist_mat, nxt, stats_alg = floyd_warshall(mat)
         t1 = perf_counter()
@@ -152,6 +195,23 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
             ensure_ascii=False,
             indent=2,
         )
+
+    # salva grafo em txt descritivo para uso em LLM
+    graph_txt_path = os.path.join(graphs_dir, f"sim{sim_id}_n{n}_graph.txt")
+    with open(graph_txt_path, "w", encoding="utf-8") as f:
+        f.write(f"sim_id={sim_id}\n")
+        f.write(f"n={n}\n")
+        f.write(f"density={density}\n")
+        f.write(f"seed={seed}\n")
+        f.write("\n")
+        if sim_id == 1:
+            f.write("LISTA DE ANTECESSORES\n")
+        elif sim_id == 2:
+            f.write("LISTA DE SUCESSORES\n")
+        else:
+            f.write("MATRIZ DE CUSTOS\n")
+        f.write("\n")
+        f.write(graph_txt)
 
     # tabela de distâncias
     rows = []
