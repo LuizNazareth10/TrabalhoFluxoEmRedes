@@ -1,0 +1,108 @@
+Metadata-Version: 2.4
+Name: fluxo-redes
+Version: 1.0.0
+Summary: Trabalho de Fluxo em Redes — Caminho Mínimo (Bellman recursivo, Dijkstra heap, Floyd-Warshall)
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24
+Requires-Dist: pandas>=2.0
+Requires-Dist: matplotlib>=3.7
+Requires-Dist: reportlab>=4.0
+
+# Trabalho — Fluxo em Redes (Caminho Mínimo)
+
+Este projeto resolve o **Primeiro Trabalho de Fluxo em Redes** (Problema do Caminho Mínimo) com as **3 simulações** exigidas.
+
+A partir de um **grafo direcionado** com custos associados aos arcos e vértices enumerados de **X1** (raiz) até **Xn**, o objetivo é computar o **caminho mínimo de X1 para todos os demais vértices**.
+
+## 1) Simulações
+
+### Simulação 1 — Bellman em DAG (sem circuitos) com custos negativos
+- **Entrada:** grafo direcionado **acíclico** (sem circuitos), permitindo **custos negativos**.
+- **Representação:** **lista de antecessores** (para cada v, lista de (u, custo u->v)).
+- **Algoritmo:** equação de Bellman para DAG: 
+  - d(X1)=0
+  - d(v)=min_{(u->v)} d(u)+c(u,v)
+- **Implementação pedida:** recursiva com **divisão e conquista**.
+  - Nesta solução, a recursão é feita sobre o conjunto de antecessores: cada d(v) é decomposto em subproblemas d(u).
+  - Para eficiência, foi usada **memoização**, mantendo a ideia recursiva.
+
+### Simulação 2 — Dijkstra (com circuitos) e custos não-negativos
+- **Entrada:** grafo direcionado com **ciclos**, porém com **custos não-negativos**.
+- **Representação:** **lista de sucessores** (para cada u, lista de (v, custo u->v)).
+- **Algoritmo:** Dijkstra.
+- **Implementação pedida:** Best-First / busca ordenada com lista de abertos usando **Heap**.
+  - Foi implementado com `heapq` (fila de prioridade) e contadores de operações (push/pop/relax).
+
+### Simulação 3 — Floyd-Warshall (com circuitos) e custos negativos
+- **Entrada:** grafo direcionado com **ciclos** e permitindo **custos negativos**.
+- **Representação:** **matriz de custos** (adjacência/custos).
+- **Algoritmo:** Floyd-Warshall.
+- **Saída pedida:** caminhos mínimos de X1 para os demais obtidos pela **primeira linha da matriz final**.
+  - O código também detecta ciclos negativos verificando se existe `dist[i][i] < 0`.
+
+## 2) Como rodar
+
+### Requisitos
+- Python 3.10+.
+- Dependências (instaláveis via pip): `numpy`, `pandas`, `matplotlib`, `reportlab`.
+
+### Instalação
+No diretório do projeto:
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/Mac: source .venv/bin/activate
+pip install -U pip
+pip install -e .
+```
+
+### Rodar as simulações e gerar resultados
+
+```bash
+python -m fluxo_redes.simulations --all --sizes 10 100 --out results
+```
+
+Isso gera:
+- `results/run_manifest.json` com metadados das execuções
+- `results/summary.csv` com métricas por simulação
+- `results/<sim>_<n>_distances.csv` com distâncias e predecessores
+- figuras em `figures/`
+
+### Gerar o relatório (PDF e Markdown)
+
+```bash
+python -m fluxo_redes.report --results results --figures figures --out report
+```
+
+Saídas:
+- `report/relatorio.md`
+- `report/relatorio.pdf`
+
+## 3) Parte 2 (linguagem generativa)
+
+O enunciado pede resolver os mesmos problemas usando uma linguagem generativa, com um prompt que peça somente para computar os caminhos mínimos de X1.
+
+Este projeto inclui um módulo opcional `fluxo_redes.llm_part2` com:
+- um gerador de prompt padronizado
+- um "mock" local (para testes offline)
+- um adaptador opcional para API (caso você configure uma chave em seu ambiente)
+
+Para imprimir o prompt e rodar o mock:
+
+```bash
+python -m fluxo_redes.llm_part2 --demo
+```
+
+Observação: o mock não acessa internet; ele serve para reproduzir o fluxo de entrada/saída do trabalho. Caso queira usar uma API real, veja as instruções dentro do arquivo `src/fluxo_redes/llm_part2.py`.
+
+## 4) Reprodutibilidade
+
+Todas as simulações aceitam `--seed` para reprodutibilidade.
+
+Exemplo:
+
+```bash
+python -m fluxo_redes.simulations --sim 2 --sizes 100 --density 0.2 --seed 123
+```
