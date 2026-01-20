@@ -1,6 +1,6 @@
 # Relatório — Fluxo em Redes (Caminho Mínimo)
 
-Gerado em 2026-01-20T15:24:36.905383Z
+Gerado em 2026-01-20T18:36:56.951589Z
 
 ## Visão geral
 
@@ -13,9 +13,9 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 | 1      | Bellman  | 10  | 22   | 7         | 0.0000    | 10             | -48.0000  | -6.3000   | 39.0000  |
 | 1      | Bellman  | 100 | 1307 | 462       | 0.0004    | 100            | -295.0000 | -126.2400 | 50.0000  |
 | 2      | Dijkstra | 10  | 25   | 0         | 0.0000    | 10             | 0.0000    | 24.0000   | 53.0000  |
-| 2      | Dijkstra | 100 | 2549 | 0         | 0.0005    | 100            | 0.0000    | 6.7000    | 12.0000  |
-| 3      | Floyd    | 10  | 32   | 9         | 0.0012    | 10             | 0.0000    | 24.6000   | 50.0000  |
-| 3      | Floyd    | 100 | 2499 | 564       | 1.2437    | 100            | -20.0000  | 0.7700    | 20.0000  |
+| 2      | Dijkstra | 100 | 2549 | 0         | 0.0003    | 100            | 0.0000    | 6.7000    | 12.0000  |
+| 3      | Floyd    | 10  | 32   | 9         | 0.0014    | 10             | 0.0000    | 24.6000   | 50.0000  |
+| 3      | Floyd    | 100 | 2499 | 564       | 0.7642    | 100            | -20.0000  | 0.7700    | 20.0000  |
 
 ## Simulação 1 — Bellman recursivo em DAG com custos negativos (lista de antecessores)
 
@@ -27,7 +27,7 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000021 s
+- Tempo de execução: 0.000020 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=nan, negative_cycle=nan, recursion_calls=32.0, relax_checks=22.0, relaxations=nan
 
@@ -35,25 +35,20 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 
 - Indicador de espalhamento (dist_max / dist_mean): -6.19. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Ranking de distância (mais perto → mais longe)
 
-| label | distance | path                 |
-| ----- | -------- | -------------------- |
-| X3    | 39.0000  | X1 -> X2 -> X3       |
-| X4    | 37.0000  | X1 -> X2 -> X3 -> X4 |
-| X5    | 27.0000  | X1 -> X2 -> X5       |
-| X2    | 20.0000  | X1 -> X2             |
-| X1    | 0.0000   | X1                   |
-
-#### Vértices mais próximos (top 5)
-
-| label | distance | path           |
-| ----- | -------- | -------------- |
-| X1    | 0.0000   | X1             |
-| X6    | -17.0000 | X1 -> X6       |
-| X2    | 20.0000  | X1 -> X2       |
-| X5    | 27.0000  | X1 -> X2 -> X5 |
-| X7    | -30.0000 | X1 -> X6 -> X7 |
+| label | distance | path                              |
+| ----- | -------- | --------------------------------- |
+| X8    | -48.0000 | X1 -> X6 -> X7 -> X8              |
+| X10   | -47.0000 | X1 -> X6 -> X7 -> X8 -> X9 -> X10 |
+| X9    | -44.0000 | X1 -> X6 -> X7 -> X8 -> X9        |
+| X7    | -30.0000 | X1 -> X6 -> X7                    |
+| X6    | -17.0000 | X1 -> X6                          |
+| X1    | 0.0000   | X1                                |
+| X2    | 20.0000  | X1 -> X2                          |
+| X5    | 27.0000  | X1 -> X2 -> X5                    |
+| X4    | 37.0000  | X1 -> X2 -> X3 -> X4              |
+| X3    | 39.0000  | X1 -> X2 -> X3                    |
 
 Figura (histograma): `figures\sim1_Bellman_n10_hist.png`
 
@@ -71,7 +66,7 @@ Figura (grafo):
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000412 s
+- Tempo de execução: 0.000389 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=nan, negative_cycle=nan, recursion_calls=1407.0, relax_checks=1307.0, relaxations=nan
 
@@ -79,7 +74,7 @@ Figura (grafo):
 
 - Indicador de espalhamento (dist_max / dist_mean): -0.40. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Vértices mais distantes (top 10)
 
 | label | distance | path                                   |
 | ----- | -------- | -------------------------------------- |
@@ -88,16 +83,26 @@ Figura (grafo):
 | X6    | 20.0000  | X1 -> X2 -> X3 -> X4 -> X6             |
 | X5    | 18.0000  | X1 -> X2 -> X3 -> X4 -> X5             |
 | X2    | 16.0000  | X1 -> X2                               |
+| X10   | 11.0000  | X1 -> X2 -> X3 -> X9 -> X10            |
+| X9    | 7.0000   | X1 -> X2 -> X3 -> X9                   |
+| X4    | 5.0000   | X1 -> X2 -> X3 -> X4                   |
+| X3    | 1.0000   | X1 -> X2 -> X3                         |
+| X1    | 0.0000   | X1                                     |
 
-#### Vértices mais próximos (top 5)
+#### Vértices mais próximos (top 10)
 
-| label | distance | path                                             |
-| ----- | -------- | ------------------------------------------------ |
-| X1    | 0.0000   | X1                                               |
-| X13   | 0.0000   | X1 -> X2 -> X3 -> X9 -> X10 -> X11 -> X12 -> X13 |
-| X3    | 1.0000   | X1 -> X2 -> X3                                   |
-| X11   | -4.0000  | X1 -> X2 -> X3 -> X9 -> X10 -> X11               |
-| X4    | 5.0000   | X1 -> X2 -> X3 -> X4                             |
+| label | distance  | path                                             |
+| ----- | --------- | ------------------------------------------------ |
+| X99   | -295.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X100  | -291.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X98   | -286.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X96   | -281.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X93   | -278.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X97   | -270.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X92   | -265.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X94   | -264.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X95   | -263.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
+| X90   | -251.0000 | X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X2… |
 
 Figura (histograma): `figures\sim1_Bellman_n100_hist.png`
 
@@ -117,7 +122,7 @@ Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000036 s
+- Tempo de execução: 0.000022 s
 
 - Contadores internos: heap_pop=10.0, heap_push=10.0, iterations=nan, negative_cycle=nan, recursion_calls=nan, relax_checks=nan, relaxations=9.0
 
@@ -125,25 +130,20 @@ Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 - Indicador de espalhamento (dist_max / dist_mean): 2.21. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Ranking de distância (mais perto → mais longe)
 
 | label | distance | path                       |
 | ----- | -------- | -------------------------- |
-| X8    | 53.0000  | X1 -> X6 -> X7 -> X8       |
+| X1    | 0.0000   | X1                         |
+| X6    | 2.0000   | X1 -> X6                   |
+| X9    | 3.0000   | X1 -> X6 -> X9             |
+| X2    | 13.0000  | X1 -> X2                   |
+| X4    | 25.0000  | X1 -> X6 -> X9 -> X4       |
+| X7    | 27.0000  | X1 -> X6 -> X7             |
+| X10   | 33.0000  | X1 -> X6 -> X9 -> X10      |
 | X3    | 42.0000  | X1 -> X2 -> X3             |
 | X5    | 42.0000  | X1 -> X6 -> X9 -> X4 -> X5 |
-| X10   | 33.0000  | X1 -> X6 -> X9 -> X10      |
-| X7    | 27.0000  | X1 -> X6 -> X7             |
-
-#### Vértices mais próximos (top 5)
-
-| label | distance | path                 |
-| ----- | -------- | -------------------- |
-| X1    | 0.0000   | X1                   |
-| X6    | 2.0000   | X1 -> X6             |
-| X9    | 3.0000   | X1 -> X6 -> X9       |
-| X2    | 13.0000  | X1 -> X2             |
-| X4    | 25.0000  | X1 -> X6 -> X9 -> X4 |
+| X8    | 53.0000  | X1 -> X6 -> X7 -> X8       |
 
 Figura (histograma): `figures\sim2_Dijkstra_n10_hist.png`
 
@@ -161,7 +161,7 @@ Figura (grafo):
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000466 s
+- Tempo de execução: 0.000261 s
 
 - Contadores internos: heap_pop=254.0, heap_push=254.0, iterations=nan, negative_cycle=nan, recursion_calls=nan, relax_checks=nan, relaxations=253.0
 
@@ -169,25 +169,35 @@ Figura (grafo):
 
 - Indicador de espalhamento (dist_max / dist_mean): 1.79. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Vértices mais distantes (top 10)
 
-| label | distance | path                                        |
-| ----- | -------- | ------------------------------------------- |
-| X61   | 12.0000  | X1 -> X32 -> X38 -> X23 -> X59 -> X4 -> X61 |
-| X19   | 11.0000  | X1 -> X76 -> X57 -> X55 -> X19              |
-| X37   | 11.0000  | X1 -> X76 -> X57 -> X36 -> X71 -> X6 -> X37 |
-| X40   | 11.0000  | X1 -> X32 -> X86 -> X14 -> X40              |
-| X70   | 10.0000  | X1 -> X70                                   |
+| label | distance | path                                         |
+| ----- | -------- | -------------------------------------------- |
+| X61   | 12.0000  | X1 -> X32 -> X38 -> X23 -> X59 -> X4 -> X61  |
+| X37   | 11.0000  | X1 -> X76 -> X57 -> X36 -> X71 -> X6 -> X37  |
+| X19   | 11.0000  | X1 -> X76 -> X57 -> X55 -> X19               |
+| X40   | 11.0000  | X1 -> X32 -> X86 -> X14 -> X40               |
+| X70   | 10.0000  | X1 -> X70                                    |
+| X81   | 10.0000  | X1 -> X76 -> X57 -> X52 -> X68 -> X81        |
+| X72   | 10.0000  | X1 -> X76 -> X57 -> X84 -> X34 -> X60 -> X72 |
+| X100  | 10.0000  | X1 -> X32 -> X95 -> X100                     |
+| X89   | 10.0000  | X1 -> X76 -> X57 -> X55 -> X85 -> X15 -> X89 |
+| X62   | 10.0000  | X1 -> X27 -> X62                             |
 
-#### Vértices mais próximos (top 5)
+#### Vértices mais próximos (top 10)
 
-| label | distance | path             |
-| ----- | -------- | ---------------- |
-| X1    | 0.0000   | X1               |
-| X35   | 1.0000   | X1 -> X35        |
-| X76   | 1.0000   | X1 -> X76        |
-| X57   | 2.0000   | X1 -> X76 -> X57 |
-| X90   | 2.0000   | X1 -> X35 -> X90 |
+| label | distance | path                    |
+| ----- | -------- | ----------------------- |
+| X1    | 0.0000   | X1                      |
+| X35   | 1.0000   | X1 -> X35               |
+| X76   | 1.0000   | X1 -> X76               |
+| X57   | 2.0000   | X1 -> X76 -> X57        |
+| X90   | 2.0000   | X1 -> X35 -> X90        |
+| X44   | 3.0000   | X1 -> X76 -> X57 -> X44 |
+| X36   | 3.0000   | X1 -> X76 -> X57 -> X36 |
+| X32   | 3.0000   | X1 -> X32               |
+| X88   | 3.0000   | X1 -> X76 -> X88        |
+| X83   | 3.0000   | X1 -> X83               |
 
 Figura (histograma): `figures\sim2_Dijkstra_n100_hist.png`
 
@@ -207,7 +217,7 @@ Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.001227 s
+- Tempo de execução: 0.001395 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=810.0, negative_cycle=False, recursion_calls=nan, relax_checks=nan, relaxations=109.0
 
@@ -215,25 +225,20 @@ Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 - Indicador de espalhamento (dist_max / dist_mean): 2.03. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Ranking de distância (mais perto → mais longe)
 
 | label | distance | path                  |
 | ----- | -------- | --------------------- |
-| X10   | 50.0000  | X1 -> X2 -> X3 -> X10 |
-| X9    | 39.0000  | X1 -> X2 -> X9        |
-| X4    | 36.0000  | X1 -> X2 -> X4        |
-| X3    | 31.0000  | X1 -> X2 -> X3        |
+| X1    | 0.0000   | X1                    |
+| X2    | 12.0000  | X1 -> X2              |
+| X5    | 15.0000  | X1 -> X2 -> X4 -> X5  |
+| X8    | 17.0000  | X1 -> X2 -> X6 -> X8  |
+| X6    | 21.0000  | X1 -> X2 -> X6        |
 | X7    | 25.0000  | X1 -> X7              |
-
-#### Vértices mais próximos (top 5)
-
-| label | distance | path                 |
-| ----- | -------- | -------------------- |
-| X1    | 0.0000   | X1                   |
-| X2    | 12.0000  | X1 -> X2             |
-| X5    | 15.0000  | X1 -> X2 -> X4 -> X5 |
-| X8    | 17.0000  | X1 -> X2 -> X6 -> X8 |
-| X6    | 21.0000  | X1 -> X2 -> X6       |
+| X3    | 31.0000  | X1 -> X2 -> X3        |
+| X4    | 36.0000  | X1 -> X2 -> X4        |
+| X9    | 39.0000  | X1 -> X2 -> X9        |
+| X10   | 50.0000  | X1 -> X2 -> X3 -> X10 |
 
 Figura (histograma): `figures\sim3_Floyd_n10_hist.png`
 
@@ -251,7 +256,7 @@ Figura (grafo):
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 1.243700 s
+- Tempo de execução: 0.764173 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=968600.0, negative_cycle=False, recursion_calls=nan, relax_checks=nan, relaxations=50325.0
 
@@ -259,7 +264,7 @@ Figura (grafo):
 
 - Indicador de espalhamento (dist_max / dist_mean): 25.97. Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.
 
-#### Vértices mais distantes (top 5)
+#### Vértices mais distantes (top 10)
 
 | label | distance | path                                  |
 | ----- | -------- | ------------------------------------- |
@@ -267,17 +272,27 @@ Figura (grafo):
 | X46   | 19.0000  | X1 -> X47 -> X87 -> X83 -> X46        |
 | X79   | 19.0000  | X1 -> X47 -> X87 -> X90 -> X79        |
 | X25   | 18.0000  | X1 -> X47 -> X87 -> X90 -> X79 -> X25 |
+| X5    | 18.0000  | X1 -> X29 -> X5                       |
 | X50   | 18.0000  | X1 -> X58 -> X64 -> X37 -> X95 -> X50 |
+| X93   | 17.0000  | X1 -> X93                             |
+| X70   | 17.0000  | X1 -> X47 -> X87 -> X70               |
+| X62   | 16.0000  | X1 -> X47 -> X72 -> X84 -> X62        |
+| X74   | 16.0000  | X1 -> X12 -> X74                      |
 
-#### Vértices mais próximos (top 5)
+#### Vértices mais próximos (top 10)
 
-| label | distance | path                           |
-| ----- | -------- | ------------------------------ |
-| X1    | 0.0000   | X1                             |
-| X33   | 1.0000   | X1 -> X77 -> X56 -> X33        |
-| X91   | 1.0000   | X1 -> X77 -> X67 -> X91        |
-| X68   | -1.0000  | X1 -> X47 -> X87 -> X70 -> X68 |
-| X92   | -1.0000  | X1 -> X47 -> X7 -> X43 -> X92  |
+| label | distance | path                                             |
+| ----- | -------- | ------------------------------------------------ |
+| X3    | -20.0000 | X1 -> X47 -> X72 -> X60 -> X3                    |
+| X29   | -20.0000 | X1 -> X29                                        |
+| X52   | -19.0000 | X1 -> X47 -> X72 -> X84 -> X52                   |
+| X60   | -18.0000 | X1 -> X47 -> X72 -> X60                          |
+| X63   | -18.0000 | X1 -> X47 -> X72 -> X84 -> X88 -> X63            |
+| X49   | -17.0000 | X1 -> X47 -> X15 -> X49                          |
+| X17   | -15.0000 | X1 -> X47 -> X72 -> X84 -> X88 -> X89 -> X16 ->… |
+| X9    | -15.0000 | X1 -> X29 -> X66 -> X9                           |
+| X20   | -15.0000 | X1 -> X58 -> X20                                 |
+| X24   | -14.0000 | X1 -> X47 -> X72 -> X84 -> X31 -> X24            |
 
 Figura (histograma): `figures\sim3_Floyd_n100_hist.png`
 
@@ -293,10 +308,10 @@ Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 | ------ | -------- | --- | --------- | ----------- | --------- | --------- | -------- |
 | 1      | Bellman  | 10  | 0.0000    | 0.2444      | 7         | -6.3000   | 33.5561  |
 | 2      | Dijkstra | 10  | 0.0000    | 0.2778      | 0         | 24.0000   | 17.8941  |
-| 3      | Floyd    | 10  | 0.0012    | 0.3556      | 9         | 24.6000   | 13.9657  |
+| 3      | Floyd    | 10  | 0.0014    | 0.3556      | 9         | 24.6000   | 13.9657  |
 | 1      | Bellman  | 100 | 0.0004    | 0.1320      | 462       | -126.2400 | 90.1513  |
-| 2      | Dijkstra | 100 | 0.0005    | 0.2575      | 0         | 6.7000    | 2.4187   |
-| 3      | Floyd    | 100 | 1.2437    | 0.2524      | 564       | 0.7700    | 11.3330  |
+| 2      | Dijkstra | 100 | 0.0003    | 0.2575      | 0         | 6.7000    | 2.4187   |
+| 3      | Floyd    | 100 | 0.7642    | 0.2524      | 564       | 0.7700    | 11.3330  |
 
 ### Observações
 - Em termos de complexidade assintótica, Dijkstra com Heap costuma escalar melhor para grafos esparsos a moderadamente densos, enquanto Floyd-Warshall cresce com n^3 e se torna o gargalo em tamanhos maiores.

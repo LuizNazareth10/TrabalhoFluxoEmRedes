@@ -100,10 +100,10 @@ def _analyze_run(summary_row: pd.Series, dist_df: pd.DataFrame) -> Dict[str, Any
             "hops_std": float(hops.std(ddof=0)) if hops.size else None,
         }
 
-    # Top/bottom distâncias
-    top_far = finite.sort_values("distance", ascending=False).head(5)[["label", "distance", "path"]]
-    finite = finite.assign(_abs_distance=finite["distance"].abs())
-    top_close = finite.sort_values("_abs_distance", ascending=True).head(5)[["label", "distance", "path"]]
+    # Ranking de distâncias (mais perto -> mais longe)
+    rank_all = finite.sort_values("distance", ascending=True)[["label", "distance", "path"]]
+    top_far = rank_all.sort_values("distance", ascending=False).head(10)
+    top_close = rank_all.head(10)
 
     # Um indicador simples de "dificuldade": razão entre dist_max e dist_mean
     dist_mean = float(summary_row.get("dist_mean")) if pd.notna(summary_row.get("dist_mean")) else np.nan
@@ -117,6 +117,7 @@ def _analyze_run(summary_row: pd.Series, dist_df: pd.DataFrame) -> Dict[str, Any
         "reachable": reachable,
         "unreachable": unreachable,
         "spread_ratio": spread_ratio,
+        "rank_all": rank_all,
         "top_far": top_far,
         "top_close": top_close,
         **hop_stats,
@@ -211,11 +212,15 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
                     "Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.\n"
                 )
 
-            lines.append("#### Vértices mais distantes (top 5)\n")
-            lines.append(_safe_markdown_table(ana["top_far"]) + "\n")
+            if n <= 10:
+                lines.append("#### Ranking de distância (mais perto → mais longe)\n")
+                lines.append(_safe_markdown_table(ana["rank_all"], max_rows=n) + "\n")
+            else:
+                lines.append("#### Vértices mais distantes (top 10)\n")
+                lines.append(_safe_markdown_table(ana["top_far"], max_rows=10) + "\n")
 
-            lines.append("#### Vértices mais próximos (top 5)\n")
-            lines.append(_safe_markdown_table(ana["top_close"]) + "\n")
+                lines.append("#### Vértices mais próximos (top 10)\n")
+                lines.append(_safe_markdown_table(ana["top_close"], max_rows=10) + "\n")
 
             # Referência às figuras
             hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
@@ -319,21 +324,25 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
     return "\n".join(lines)
 
 
-def _df_to_reportlab_table(df: pd.DataFrame, max_rows: int = 30) -> Table:
+def _df_to_reportlab_table(df: pd.DataFrame, max_rows: int = 30, font_size: int = 8, word_wrap: bool = False) -> Table:
     if len(df) > max_rows:
         df = df.head(max_rows)
 
     data = [list(df.columns)] + df.astype(str).values.tolist()
     t = Table(data, hAlign="LEFT")
+    style_items = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#9CA3AF")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), font_size),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]
+    if word_wrap:
+        style_items.append(("WORDWRAP", (0, 0), (-1, -1), "CJK"))
+
     style = TableStyle(
-        [
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E5E7EB")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-            ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#9CA3AF")),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]
+        style_items
     )
     t.setStyle(style)
     return t
@@ -386,14 +395,19 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
             )
             story.append(Spacer(1, 8))
 
-            # Tabelas top
-            story.append(Paragraph("Top 5 mais distantes", styles["Heading3"]))
-            story.append(_df_to_reportlab_table(ana["top_far"], max_rows=5))
-            story.append(Spacer(1, 8))
+            if n <= 10:
+                story.append(Paragraph("Ranking de distância (mais perto → mais longe)", styles["Heading3"]))
+                story.append(_df_to_reportlab_table(ana["rank_all"], max_rows=n))
+                story.append(Spacer(1, 8))
+            else:
+                font_size = 6 if n >= 100 else 8
+                story.append(Paragraph("Top 10 mais distantes", styles["Heading3"]))
+                story.append(_df_to_reportlab_table(ana["top_far"], max_rows=10, font_size=font_size, word_wrap=True))
+                story.append(Spacer(1, 8))
 
-            story.append(Paragraph("Top 5 mais próximos", styles["Heading3"]))
-            story.append(_df_to_reportlab_table(ana["top_close"], max_rows=5))
-            story.append(Spacer(1, 8))
+                story.append(Paragraph("Top 10 mais próximos", styles["Heading3"]))
+                story.append(_df_to_reportlab_table(ana["top_close"], max_rows=10, font_size=font_size, word_wrap=True))
+                story.append(Spacer(1, 8))
 
             # Figuras
             hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
