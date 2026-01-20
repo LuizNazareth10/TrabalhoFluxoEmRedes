@@ -1,6 +1,6 @@
 # Relatório — Fluxo em Redes (Caminho Mínimo)
 
-Gerado em 2026-01-17T14:52:41.499761Z
+Gerado em 2026-01-20T15:24:36.905383Z
 
 ## Visão geral
 
@@ -8,13 +8,14 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 
 ### Resumo executivo dos resultados
 
- sim_id   n    m  neg_edges  runtime_s  dist_reachable  dist_min  dist_mean  dist_max
-      1  10   22          7   0.000040              10     -48.0      -6.30      39.0
-      1 100 1307        462   0.000316             100    -295.0    -126.24      50.0
-      2  10   25          0   0.000024              10       0.0      24.00      53.0
-      2 100 2549          0   0.000420             100       0.0       6.70      12.0
-      3  10   32          9   0.001087              10       0.0      24.60      50.0
-      3 100 2499        564   1.199227             100     -20.0       0.77      20.0
+| sim_id | sim_name | n   | m    | neg_edges | runtime_s | dist_reachable | dist_min  | dist_mean | dist_max |
+| ------ | -------- | --- | ---- | --------- | --------- | -------------- | --------- | --------- | -------- |
+| 1      | Bellman  | 10  | 22   | 7         | 0.0000    | 10             | -48.0000  | -6.3000   | 39.0000  |
+| 1      | Bellman  | 100 | 1307 | 462       | 0.0004    | 100            | -295.0000 | -126.2400 | 50.0000  |
+| 2      | Dijkstra | 10  | 25   | 0         | 0.0000    | 10             | 0.0000    | 24.0000   | 53.0000  |
+| 2      | Dijkstra | 100 | 2549 | 0         | 0.0005    | 100            | 0.0000    | 6.7000    | 12.0000  |
+| 3      | Floyd    | 10  | 32   | 9         | 0.0012    | 10             | 0.0000    | 24.6000   | 50.0000  |
+| 3      | Floyd    | 100 | 2499 | 564       | 1.2437    | 100            | -20.0000  | 0.7700    | 20.0000  |
 
 ## Simulação 1 — Bellman recursivo em DAG com custos negativos (lista de antecessores)
 
@@ -26,7 +27,7 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000040 s
+- Tempo de execução: 0.000021 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=nan, negative_cycle=nan, recursion_calls=32.0, relax_checks=22.0, relaxations=nan
 
@@ -36,25 +37,31 @@ O projeto implementa três simulações de caminho mínimo a partir da raiz X1, 
 
 #### Vértices mais distantes (top 5)
 
-label  distance                 path
-   X3      39.0       X1 -> X2 -> X3
-   X4      37.0 X1 -> X2 -> X3 -> X4
-   X5      27.0       X1 -> X2 -> X5
-   X2      20.0             X1 -> X2
-   X1       0.0                   X1
+| label | distance | path                 |
+| ----- | -------- | -------------------- |
+| X3    | 39.0000  | X1 -> X2 -> X3       |
+| X4    | 37.0000  | X1 -> X2 -> X3 -> X4 |
+| X5    | 27.0000  | X1 -> X2 -> X5       |
+| X2    | 20.0000  | X1 -> X2             |
+| X1    | 0.0000   | X1                   |
 
 #### Vértices mais próximos (top 5)
 
-label  distance                              path
-   X8     -48.0              X1 -> X6 -> X7 -> X8
-  X10     -47.0 X1 -> X6 -> X7 -> X8 -> X9 -> X10
-   X9     -44.0        X1 -> X6 -> X7 -> X8 -> X9
-   X7     -30.0                    X1 -> X6 -> X7
-   X6     -17.0                          X1 -> X6
+| label | distance | path           |
+| ----- | -------- | -------------- |
+| X1    | 0.0000   | X1             |
+| X6    | -17.0000 | X1 -> X6       |
+| X2    | 20.0000  | X1 -> X2       |
+| X5    | 27.0000  | X1 -> X2 -> X5 |
+| X7    | -30.0000 | X1 -> X6 -> X7 |
 
-Figura (histograma): `figures\sim1_n10_hist.png`
+Figura (histograma): `figures\sim1_Bellman_n10_hist.png`
 
-Figura (série por vértice): `figures\sim1_n10_series.png`
+Figura (série por vértice): `figures\sim1_Bellman_n10_series.png`
+
+Figura (grafo):
+
+![](figures\sim1_Bellman_n10_graph.png)
 
 **Comentário:** em DAGs densos, um aumento de densidade tende a reduzir distâncias médias (mais opções de atalhos). Custos negativos podem criar caminhos muito curtos, mas como não há ciclos, não há risco de reduzir indefinidamente.
 
@@ -64,7 +71,7 @@ Figura (série por vértice): `figures\sim1_n10_series.png`
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000316 s
+- Tempo de execução: 0.000412 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=nan, negative_cycle=nan, recursion_calls=1407.0, relax_checks=1307.0, relaxations=nan
 
@@ -74,25 +81,29 @@ Figura (série por vértice): `figures\sim1_n10_series.png`
 
 #### Vértices mais distantes (top 5)
 
-label  distance                                   path
-   X8      50.0 X1 -> X2 -> X3 -> X4 -> X6 -> X7 -> X8
-   X7      37.0       X1 -> X2 -> X3 -> X4 -> X6 -> X7
-   X6      20.0             X1 -> X2 -> X3 -> X4 -> X6
-   X5      18.0             X1 -> X2 -> X3 -> X4 -> X5
-   X2      16.0                               X1 -> X2
+| label | distance | path                                   |
+| ----- | -------- | -------------------------------------- |
+| X8    | 50.0000  | X1 -> X2 -> X3 -> X4 -> X6 -> X7 -> X8 |
+| X7    | 37.0000  | X1 -> X2 -> X3 -> X4 -> X6 -> X7       |
+| X6    | 20.0000  | X1 -> X2 -> X3 -> X4 -> X6             |
+| X5    | 18.0000  | X1 -> X2 -> X3 -> X4 -> X5             |
+| X2    | 16.0000  | X1 -> X2                               |
 
 #### Vértices mais próximos (top 5)
 
-label  distance                                                                                                                                                                                                                                                 path
-  X99    -295.0 X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X20 -> X21 -> X25 -> X26 -> X33 -> X38 -> X39 -> X40 -> X41 -> X42 -> X43 -> X44 -> X61 -> X67 -> X68 -> X69 -> X70 -> X71 -> X77 -> X82 -> X83 -> X88 -> X89 -> X90 -> X91 -> X94 -> X95 -> X96 -> X99
- X100    -291.0       X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X20 -> X21 -> X25 -> X26 -> X33 -> X38 -> X39 -> X40 -> X41 -> X42 -> X43 -> X44 -> X61 -> X67 -> X68 -> X69 -> X70 -> X71 -> X77 -> X82 -> X83 -> X88 -> X89 -> X90 -> X91 -> X92 -> X93 -> X100
-  X98    -286.0        X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X20 -> X21 -> X25 -> X26 -> X33 -> X38 -> X39 -> X40 -> X41 -> X42 -> X43 -> X44 -> X61 -> X67 -> X68 -> X69 -> X70 -> X71 -> X77 -> X82 -> X83 -> X88 -> X89 -> X90 -> X91 -> X94 -> X97 -> X98
-  X96    -281.0        X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X20 -> X21 -> X25 -> X26 -> X33 -> X38 -> X39 -> X40 -> X41 -> X42 -> X43 -> X44 -> X61 -> X67 -> X68 -> X69 -> X70 -> X71 -> X77 -> X82 -> X83 -> X88 -> X89 -> X90 -> X91 -> X94 -> X95 -> X96
-  X93    -278.0               X1 -> X2 -> X3 -> X4 -> X15 -> X16 -> X17 -> X20 -> X21 -> X25 -> X26 -> X33 -> X38 -> X39 -> X40 -> X41 -> X42 -> X43 -> X44 -> X61 -> X67 -> X68 -> X69 -> X70 -> X71 -> X77 -> X82 -> X83 -> X88 -> X89 -> X90 -> X91 -> X92 -> X93
+| label | distance | path                                             |
+| ----- | -------- | ------------------------------------------------ |
+| X1    | 0.0000   | X1                                               |
+| X13   | 0.0000   | X1 -> X2 -> X3 -> X9 -> X10 -> X11 -> X12 -> X13 |
+| X3    | 1.0000   | X1 -> X2 -> X3                                   |
+| X11   | -4.0000  | X1 -> X2 -> X3 -> X9 -> X10 -> X11               |
+| X4    | 5.0000   | X1 -> X2 -> X3 -> X4                             |
 
-Figura (histograma): `figures\sim1_n100_hist.png`
+Figura (histograma): `figures\sim1_Bellman_n100_hist.png`
 
-Figura (série por vértice): `figures\sim1_n100_series.png`
+Figura (série por vértice): `figures\sim1_Bellman_n100_series.png`
+
+Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 **Comentário:** em DAGs densos, um aumento de densidade tende a reduzir distâncias médias (mais opções de atalhos). Custos negativos podem criar caminhos muito curtos, mas como não há ciclos, não há risco de reduzir indefinidamente.
 
@@ -106,7 +117,7 @@ Figura (série por vértice): `figures\sim1_n100_series.png`
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000024 s
+- Tempo de execução: 0.000036 s
 
 - Contadores internos: heap_pop=10.0, heap_push=10.0, iterations=nan, negative_cycle=nan, recursion_calls=nan, relax_checks=nan, relaxations=9.0
 
@@ -116,25 +127,31 @@ Figura (série por vértice): `figures\sim1_n100_series.png`
 
 #### Vértices mais distantes (top 5)
 
-label  distance                       path
-   X8      53.0       X1 -> X6 -> X7 -> X8
-   X3      42.0             X1 -> X2 -> X3
-   X5      42.0 X1 -> X6 -> X9 -> X4 -> X5
-  X10      33.0      X1 -> X6 -> X9 -> X10
-   X7      27.0             X1 -> X6 -> X7
+| label | distance | path                       |
+| ----- | -------- | -------------------------- |
+| X8    | 53.0000  | X1 -> X6 -> X7 -> X8       |
+| X3    | 42.0000  | X1 -> X2 -> X3             |
+| X5    | 42.0000  | X1 -> X6 -> X9 -> X4 -> X5 |
+| X10   | 33.0000  | X1 -> X6 -> X9 -> X10      |
+| X7    | 27.0000  | X1 -> X6 -> X7             |
 
 #### Vértices mais próximos (top 5)
 
-label  distance                 path
-   X1       0.0                   X1
-   X6       2.0             X1 -> X6
-   X9       3.0       X1 -> X6 -> X9
-   X2      13.0             X1 -> X2
-   X4      25.0 X1 -> X6 -> X9 -> X4
+| label | distance | path                 |
+| ----- | -------- | -------------------- |
+| X1    | 0.0000   | X1                   |
+| X6    | 2.0000   | X1 -> X6             |
+| X9    | 3.0000   | X1 -> X6 -> X9       |
+| X2    | 13.0000  | X1 -> X2             |
+| X4    | 25.0000  | X1 -> X6 -> X9 -> X4 |
 
-Figura (histograma): `figures\sim2_n10_hist.png`
+Figura (histograma): `figures\sim2_Dijkstra_n10_hist.png`
 
-Figura (série por vértice): `figures\sim2_n10_series.png`
+Figura (série por vértice): `figures\sim2_Dijkstra_n10_series.png`
+
+Figura (grafo):
+
+![](figures\sim2_Dijkstra_n10_graph.png)
 
 **Comentário:** a forma Best-First com Heap prioriza nós com menor distância estimada. Em grafos mais densos, o número de relaxações cresce, mas a seleção ordenada mantém a correção.
 
@@ -144,7 +161,7 @@ Figura (série por vértice): `figures\sim2_n10_series.png`
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 0.000420 s
+- Tempo de execução: 0.000466 s
 
 - Contadores internos: heap_pop=254.0, heap_push=254.0, iterations=nan, negative_cycle=nan, recursion_calls=nan, relax_checks=nan, relaxations=253.0
 
@@ -154,25 +171,29 @@ Figura (série por vértice): `figures\sim2_n10_series.png`
 
 #### Vértices mais distantes (top 5)
 
-label  distance                                        path
-  X61      12.0 X1 -> X32 -> X38 -> X23 -> X59 -> X4 -> X61
-  X19      11.0              X1 -> X76 -> X57 -> X55 -> X19
-  X37      11.0 X1 -> X76 -> X57 -> X36 -> X71 -> X6 -> X37
-  X40      11.0              X1 -> X32 -> X86 -> X14 -> X40
-  X70      10.0                                   X1 -> X70
+| label | distance | path                                        |
+| ----- | -------- | ------------------------------------------- |
+| X61   | 12.0000  | X1 -> X32 -> X38 -> X23 -> X59 -> X4 -> X61 |
+| X19   | 11.0000  | X1 -> X76 -> X57 -> X55 -> X19              |
+| X37   | 11.0000  | X1 -> X76 -> X57 -> X36 -> X71 -> X6 -> X37 |
+| X40   | 11.0000  | X1 -> X32 -> X86 -> X14 -> X40              |
+| X70   | 10.0000  | X1 -> X70                                   |
 
 #### Vértices mais próximos (top 5)
 
-label  distance             path
-   X1       0.0               X1
-  X35       1.0        X1 -> X35
-  X76       1.0        X1 -> X76
-  X57       2.0 X1 -> X76 -> X57
-  X90       2.0 X1 -> X35 -> X90
+| label | distance | path             |
+| ----- | -------- | ---------------- |
+| X1    | 0.0000   | X1               |
+| X35   | 1.0000   | X1 -> X35        |
+| X76   | 1.0000   | X1 -> X76        |
+| X57   | 2.0000   | X1 -> X76 -> X57 |
+| X90   | 2.0000   | X1 -> X35 -> X90 |
 
-Figura (histograma): `figures\sim2_n100_hist.png`
+Figura (histograma): `figures\sim2_Dijkstra_n100_hist.png`
 
-Figura (série por vértice): `figures\sim2_n100_series.png`
+Figura (série por vértice): `figures\sim2_Dijkstra_n100_series.png`
+
+Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 **Comentário:** a forma Best-First com Heap prioriza nós com menor distância estimada. Em grafos mais densos, o número de relaxações cresce, mas a seleção ordenada mantém a correção.
 
@@ -186,7 +207,7 @@ Figura (série por vértice): `figures\sim2_n100_series.png`
 
 - Alcançáveis a partir de X1: 10/10 (inalcançáveis: 0)
 
-- Tempo de execução: 0.001087 s
+- Tempo de execução: 0.001227 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=810.0, negative_cycle=False, recursion_calls=nan, relax_checks=nan, relaxations=109.0
 
@@ -196,25 +217,31 @@ Figura (série por vértice): `figures\sim2_n100_series.png`
 
 #### Vértices mais distantes (top 5)
 
-label  distance                  path
-  X10      50.0 X1 -> X2 -> X3 -> X10
-   X9      39.0        X1 -> X2 -> X9
-   X4      36.0        X1 -> X2 -> X4
-   X3      31.0        X1 -> X2 -> X3
-   X7      25.0              X1 -> X7
+| label | distance | path                  |
+| ----- | -------- | --------------------- |
+| X10   | 50.0000  | X1 -> X2 -> X3 -> X10 |
+| X9    | 39.0000  | X1 -> X2 -> X9        |
+| X4    | 36.0000  | X1 -> X2 -> X4        |
+| X3    | 31.0000  | X1 -> X2 -> X3        |
+| X7    | 25.0000  | X1 -> X7              |
 
 #### Vértices mais próximos (top 5)
 
-label  distance                 path
-   X1       0.0                   X1
-   X2      12.0             X1 -> X2
-   X5      15.0 X1 -> X2 -> X4 -> X5
-   X8      17.0 X1 -> X2 -> X6 -> X8
-   X6      21.0       X1 -> X2 -> X6
+| label | distance | path                 |
+| ----- | -------- | -------------------- |
+| X1    | 0.0000   | X1                   |
+| X2    | 12.0000  | X1 -> X2             |
+| X5    | 15.0000  | X1 -> X2 -> X4 -> X5 |
+| X8    | 17.0000  | X1 -> X2 -> X6 -> X8 |
+| X6    | 21.0000  | X1 -> X2 -> X6       |
 
-Figura (histograma): `figures\sim3_n10_hist.png`
+Figura (histograma): `figures\sim3_Floyd_n10_hist.png`
 
-Figura (série por vértice): `figures\sim3_n10_series.png`
+Figura (série por vértice): `figures\sim3_Floyd_n10_series.png`
+
+Figura (grafo):
+
+![](figures\sim3_Floyd_n10_graph.png)
 
 **Comentário:** o custo O(n^3) do Floyd-Warshall domina rapidamente em n=100. Mesmo assim, ele fornece todas as distâncias entre pares, o que é útil quando queremos responder muitas consultas de caminho mínimo após uma única execução.
 
@@ -224,7 +251,7 @@ Figura (série por vértice): `figures\sim3_n10_series.png`
 
 - Alcançáveis a partir de X1: 100/100 (inalcançáveis: 0)
 
-- Tempo de execução: 1.199227 s
+- Tempo de execução: 1.243700 s
 
 - Contadores internos: heap_pop=nan, heap_push=nan, iterations=968600.0, negative_cycle=False, recursion_calls=nan, relax_checks=nan, relaxations=50325.0
 
@@ -234,37 +261,42 @@ Figura (série por vértice): `figures\sim3_n10_series.png`
 
 #### Vértices mais distantes (top 5)
 
-label  distance                                  path
-  X41      20.0                      X1 -> X12 -> X41
-  X46      19.0        X1 -> X47 -> X87 -> X83 -> X46
-  X79      19.0        X1 -> X47 -> X87 -> X90 -> X79
-  X25      18.0 X1 -> X47 -> X87 -> X90 -> X79 -> X25
-  X50      18.0 X1 -> X58 -> X64 -> X37 -> X95 -> X50
+| label | distance | path                                  |
+| ----- | -------- | ------------------------------------- |
+| X41   | 20.0000  | X1 -> X12 -> X41                      |
+| X46   | 19.0000  | X1 -> X47 -> X87 -> X83 -> X46        |
+| X79   | 19.0000  | X1 -> X47 -> X87 -> X90 -> X79        |
+| X25   | 18.0000  | X1 -> X47 -> X87 -> X90 -> X79 -> X25 |
+| X50   | 18.0000  | X1 -> X58 -> X64 -> X37 -> X95 -> X50 |
 
 #### Vértices mais próximos (top 5)
 
-label  distance                                  path
-   X3     -20.0         X1 -> X47 -> X72 -> X60 -> X3
-  X29     -20.0                             X1 -> X29
-  X52     -19.0        X1 -> X47 -> X72 -> X84 -> X52
-  X60     -18.0               X1 -> X47 -> X72 -> X60
-  X63     -18.0 X1 -> X47 -> X72 -> X84 -> X88 -> X63
+| label | distance | path                           |
+| ----- | -------- | ------------------------------ |
+| X1    | 0.0000   | X1                             |
+| X33   | 1.0000   | X1 -> X77 -> X56 -> X33        |
+| X91   | 1.0000   | X1 -> X77 -> X67 -> X91        |
+| X68   | -1.0000  | X1 -> X47 -> X87 -> X70 -> X68 |
+| X92   | -1.0000  | X1 -> X47 -> X7 -> X43 -> X92  |
 
-Figura (histograma): `figures\sim3_n100_hist.png`
+Figura (histograma): `figures\sim3_Floyd_n100_hist.png`
 
-Figura (série por vértice): `figures\sim3_n100_series.png`
+Figura (série por vértice): `figures\sim3_Floyd_n100_series.png`
+
+Figura (grafo) indisponível: Visualização do grafo desativada para n >= 100
 
 **Comentário:** o custo O(n^3) do Floyd-Warshall domina rapidamente em n=100. Mesmo assim, ele fornece todas as distâncias entre pares, o que é útil quando queremos responder muitas consultas de caminho mínimo após uma única execução.
 
 ## Comparação entre algoritmos
 
- sim_id   n  runtime_s  eff_density  neg_edges  dist_mean  dist_std
-      1  10   0.000040     0.244444          7      -6.30 33.556072
-      2  10   0.000024     0.277778          0      24.00 17.894133
-      3  10   0.001087     0.355556          9      24.60 13.965672
-      1 100   0.000316     0.132020        462    -126.24 90.151331
-      2 100   0.000420     0.257475          0       6.70  2.418677
-      3 100   1.199227     0.252424        564       0.77 11.333009
+| sim_id | sim_name | n   | runtime_s | eff_density | neg_edges | dist_mean | dist_std |
+| ------ | -------- | --- | --------- | ----------- | --------- | --------- | -------- |
+| 1      | Bellman  | 10  | 0.0000    | 0.2444      | 7         | -6.3000   | 33.5561  |
+| 2      | Dijkstra | 10  | 0.0000    | 0.2778      | 0         | 24.0000   | 17.8941  |
+| 3      | Floyd    | 10  | 0.0012    | 0.3556      | 9         | 24.6000   | 13.9657  |
+| 1      | Bellman  | 100 | 0.0004    | 0.1320      | 462       | -126.2400 | 90.1513  |
+| 2      | Dijkstra | 100 | 0.0005    | 0.2575      | 0         | 6.7000    | 2.4187   |
+| 3      | Floyd    | 100 | 1.2437    | 0.2524      | 564       | 0.7700    | 11.3330  |
 
 ### Observações
 - Em termos de complexidade assintótica, Dijkstra com Heap costuma escalar melhor para grafos esparsos a moderadamente densos, enquanto Floyd-Warshall cresce com n^3 e se torna o gargalo em tamanhos maiores.

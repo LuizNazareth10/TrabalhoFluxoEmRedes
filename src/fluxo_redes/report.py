@@ -24,14 +24,37 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib import colors
 
+from .visualize import draw_graph
 
-def _safe_markdown_table(df: pd.DataFrame, max_rows: int = 20) -> str:
+
+def _safe_markdown_table(df: pd.DataFrame, max_rows: int = 20, max_col_width: int = 48) -> str:
     if len(df) > max_rows:
         df = df.head(max_rows)
-    try:
-        return df.to_markdown(index=False)
-    except Exception:
-        return df.to_string(index=False)
+
+    def _fmt(v: object) -> str:
+        if pd.isna(v):
+            return ""
+        if isinstance(v, float):
+            return f"{v:.4f}"
+        s = str(v)
+        if len(s) > max_col_width:
+            return s[: max_col_width - 1] + "…"
+        return s
+
+    headers = [str(c) for c in df.columns]
+    rows = [[_fmt(v) for v in row] for row in df.values.tolist()]
+
+    widths = [len(h) for h in headers]
+    for row in rows:
+        widths = [max(w, len(cell)) for w, cell in zip(widths, row)]
+
+    def _row(cells: List[str]) -> str:
+        return "| " + " | ".join(cell.ljust(w) for cell, w in zip(cells, widths)) + " |"
+
+    header_line = _row(headers)
+    sep_line = "| " + " | ".join("-" * w for w in widths) + " |"
+    body_lines = [_row(row) for row in rows]
+    return "\n".join([header_line, sep_line] + body_lines)
 
 
 def _effective_density(n: int, m: int) -> float:
@@ -39,9 +62,23 @@ def _effective_density(n: int, m: int) -> float:
     return float(m) / float(denom) if denom else 0.0
 
 
-def _read_distances(results_dir: str, sim_id: int, n: int) -> pd.DataFrame:
-    path = os.path.join(results_dir, f"sim{sim_id}_n{n}_distances.csv")
+def _read_distances(results_dir: str, sim_id: int, sim_name: str, n: int) -> pd.DataFrame:
+    path = os.path.join(results_dir, f"sim{sim_id}_{sim_name}_n{n}_distances.csv")
     return pd.read_csv(path)
+
+
+def _graph_json_path(results_dir: str, sim_id: int, sim_name: str, n: int) -> str:
+    return os.path.join(results_dir, f"sim{sim_id}_{sim_name}_n{n}_graph.json")
+
+
+def _ensure_graph_viz(results_dir: str, figures_dir: str, sim_id: int, sim_name: str, n: int) -> str:
+    if n >= 100:
+        raise ValueError("Visualização do grafo desativada para n >= 100")
+    graph_json = _graph_json_path(results_dir, sim_id, sim_name, n)
+    out_path = os.path.join(figures_dir, f"sim{sim_id}_{sim_name}_n{n}_graph.png")
+    if not os.path.exists(out_path):
+        draw_graph(graph_json, out_path, layout="spring", seed=42)
+    return out_path
 
 
 def _analyze_run(summary_row: pd.Series, dist_df: pd.DataFrame) -> Dict[str, Any]:
@@ -65,7 +102,8 @@ def _analyze_run(summary_row: pd.Series, dist_df: pd.DataFrame) -> Dict[str, Any
 
     # Top/bottom distâncias
     top_far = finite.sort_values("distance", ascending=False).head(5)[["label", "distance", "path"]]
-    top_close = finite.sort_values("distance", ascending=True).head(5)[["label", "distance", "path"]]
+    finite = finite.assign(_abs_distance=finite["distance"].abs())
+    top_close = finite.sort_values("_abs_distance", ascending=True).head(5)[["label", "distance", "path"]]
 
     # Um indicador simples de "dificuldade": razão entre dist_max e dist_mean
     dist_mean = float(summary_row.get("dist_mean")) if pd.notna(summary_row.get("dist_mean")) else np.nan
@@ -100,6 +138,7 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
     lines.append("### Resumo executivo dos resultados\n")
     show_cols = [
         "sim_id",
+        "sim_name",
         "n",
         "m",
         "neg_edges",
@@ -141,7 +180,8 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
 
         for _, row in sim_df.iterrows():
             n = int(row["n"])
-            dist_df = _read_distances(results_dir, int(sim_id), n)
+            sim_name = str(row.get("sim_name", "")) or ("Bellman" if int(sim_id) == 1 else "Dijkstra" if int(sim_id) == 2 else "Floyd")
+            dist_df = _read_distances(results_dir, int(sim_id), sim_name, n)
             ana = _analyze_run(row, dist_df)
 
             lines.append(f"### Execução: n={n}\n")
@@ -178,12 +218,20 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
             lines.append(_safe_markdown_table(ana["top_close"]) + "\n")
 
             # Referência às figuras
-            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_n{n}_hist.png")
-            series = os.path.join(figures_dir, f"sim{int(sim_id)}_n{n}_series.png")
+            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
+            series = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_series.png")
             if os.path.exists(hist):
                 lines.append(f"Figura (histograma): `{hist}`\n")
             if os.path.exists(series):
                 lines.append(f"Figura (série por vértice): `{series}`\n")
+
+            # Visualização do grafo
+            try:
+                graph_viz = _ensure_graph_viz(results_dir, figures_dir, int(sim_id), sim_name, n)
+                lines.append("Figura (grafo):\n")
+                lines.append(f"![]({graph_viz})\n")
+            except Exception as exc:
+                lines.append(f"Figura (grafo) indisponível: {exc}\n")
 
             # Comentários interpretativos específicos
             if int(sim_id) == 1:
@@ -206,7 +254,10 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
     lines.append("## Comparação entre algoritmos\n")
     comp = summary.copy()
     comp["eff_density"] = comp.apply(lambda r: _effective_density(int(r["n"]), int(r["m"])), axis=1)
-    comp_small = comp[["sim_id", "n", "runtime_s", "eff_density", "neg_edges", "dist_mean", "dist_std"]].sort_values(["n", "sim_id"])
+    if "sim_name" in comp.columns:
+        comp_small = comp[["sim_id", "sim_name", "n", "runtime_s", "eff_density", "neg_edges", "dist_mean", "dist_std"]].sort_values(["n", "sim_id"])
+    else:
+        comp_small = comp[["sim_id", "n", "runtime_s", "eff_density", "neg_edges", "dist_mean", "dist_std"]].sort_values(["n", "sim_id"])
     lines.append(_safe_markdown_table(comp_small) + "\n")
 
     lines.append(
@@ -300,7 +351,7 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
     story.append(Spacer(1, 12))
 
     story.append(Paragraph("Resumo executivo", styles["Heading2"]))
-    show_cols = ["sim_id", "n", "m", "neg_edges", "runtime_s", "dist_reachable", "dist_mean", "dist_max"]
+    show_cols = ["sim_id", "sim_name", "n", "m", "neg_edges", "runtime_s", "dist_reachable", "dist_mean", "dist_max"]
     story.append(_df_to_reportlab_table(summary[show_cols].sort_values(["sim_id", "n"]), max_rows=20))
     story.append(Spacer(1, 12))
 
@@ -322,7 +373,8 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
             n = int(row["n"])
             story.append(Paragraph(f"Execução n={n}", styles["Heading2"]))
 
-            dist_df = _read_distances(results_dir, int(sim_id), n)
+            sim_name = str(row.get("sim_name", "")) or ("Bellman" if int(sim_id) == 1 else "Dijkstra" if int(sim_id) == 2 else "Floyd")
+            dist_df = _read_distances(results_dir, int(sim_id), sim_name, n)
             ana = _analyze_run(row, dist_df)
 
             story.append(
@@ -344,12 +396,21 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
             story.append(Spacer(1, 8))
 
             # Figuras
-            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_n{n}_hist.png")
-            series = os.path.join(figures_dir, f"sim{int(sim_id)}_n{n}_series.png")
+            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
+            series = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_series.png")
             for p in [hist, series]:
                 if os.path.exists(p):
                     story.append(Image(p, width=500, height=250))
                     story.append(Spacer(1, 6))
+
+            # Visualização do grafo
+            try:
+                graph_viz = _ensure_graph_viz(results_dir, figures_dir, int(sim_id), sim_name, n)
+                if os.path.exists(graph_viz):
+                    story.append(Image(graph_viz, width=500, height=350))
+                    story.append(Spacer(1, 6))
+            except Exception:
+                pass
 
     doc.build(story)
 

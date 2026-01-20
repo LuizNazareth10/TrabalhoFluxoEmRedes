@@ -7,6 +7,7 @@ src/fluxo_redes/report.py
 src/fluxo_redes/representations.py
 src/fluxo_redes/simulations.py
 src/fluxo_redes/utils.py
+src/fluxo_redes/visualize.py
 src/fluxo_redes.egg-info/PKG-INFO
 src/fluxo_redes.egg-info/SOURCES.txt
 src/fluxo_redes.egg-info/dependency_links.txt

@@ -46,6 +46,16 @@ def _vertex_label(i: int) -> str:
     return f"X{i+1}"
 
 
+def _sim_name(sim_id: int) -> str:
+    if sim_id == 1:
+        return "Bellman"
+    if sim_id == 2:
+        return "Dijkstra"
+    if sim_id == 3:
+        return "Floyd"
+    raise ValueError("sim_id deve ser 1, 2 ou 3")
+
+
 def _distance_stats(dist: List[float]) -> dict:
     arr = np.array(dist, dtype=float)
     finite = arr[np.isfinite(arr)]
@@ -130,11 +140,13 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     os.makedirs(fig_dir, exist_ok=True)
     graphs_dir = os.path.join(out_dir, "graphs")
     os.makedirs(graphs_dir, exist_ok=True)
+    sim_name = _sim_name(sim_id)
 
     if sim_id == 1:
         edges = generate_dag_negative_costs(n=n, density=density, seed=seed)
         preds = to_predecessor_list(n, edges)
-        graph_txt = _format_predecessor_list(preds)
+        succs = to_successor_list(n, edges)
+        mat = to_cost_matrix(n, edges)
         t0 = perf_counter()
         dist, pred, stats_alg = shortest_paths_bellman_dag_recursive(preds, root=0)
         t1 = perf_counter()
@@ -148,7 +160,8 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     elif sim_id == 2:
         edges = generate_cyclic_nonnegative(n=n, density=density, seed=seed)
         succs = to_successor_list(n, edges)
-        graph_txt = _format_successor_list(succs)
+        preds = to_predecessor_list(n, edges)
+        mat = to_cost_matrix(n, edges)
         t0 = perf_counter()
         dist, pred, stats_alg = dijkstra_heap(succs, root=0)
         t1 = perf_counter()
@@ -162,7 +175,8 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     elif sim_id == 3:
         edges = generate_cyclic_with_negative_no_neg_cycles(n=n, density=density, seed=seed)
         mat = to_cost_matrix(n, edges)
-        graph_txt = _format_cost_matrix(mat)
+        preds = to_predecessor_list(n, edges)
+        succs = to_successor_list(n, edges)
         t0 = perf_counter()
         dist_mat, nxt, stats_alg = floyd_warshall(mat)
         t1 = perf_counter()
@@ -181,11 +195,12 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
     runtime_s = float(t1 - t0)
 
     # salva grafo
-    graph_path = os.path.join(out_dir, f"sim{sim_id}_n{n}_graph.json")
+    graph_path = os.path.join(out_dir, f"sim{sim_id}_{sim_name}_n{n}_graph.json")
     with open(graph_path, "w", encoding="utf-8") as f:
         json.dump(
             {
                 "sim_id": sim_id,
+                "sim_name": sim_name,
                 "n": n,
                 "density": density,
                 "seed": seed,
@@ -196,22 +211,26 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
             indent=2,
         )
 
-    # salva grafo em txt descritivo para uso em LLM
-    graph_txt_path = os.path.join(graphs_dir, f"sim{sim_id}_n{n}_graph.txt")
+    # salva grafo em txt descritivo para uso em LLM (todas as representações)
+    graph_txt_path = os.path.join(graphs_dir, f"sim{sim_id}_{sim_name}_n{n}_graph.txt")
     with open(graph_txt_path, "w", encoding="utf-8") as f:
         f.write(f"sim_id={sim_id}\n")
+        f.write(f"sim_name={sim_name}\n")
         f.write(f"n={n}\n")
         f.write(f"density={density}\n")
         f.write(f"seed={seed}\n")
         f.write("\n")
-        if sim_id == 1:
-            f.write("LISTA DE ANTECESSORES\n")
-        elif sim_id == 2:
-            f.write("LISTA DE SUCESSORES\n")
-        else:
-            f.write("MATRIZ DE CUSTOS\n")
+        f.write("LISTA DE ANTECESSORES\n")
         f.write("\n")
-        f.write(graph_txt)
+        f.write(_format_predecessor_list(preds))
+        f.write("\n\n")
+        f.write("LISTA DE SUCESSORES\n")
+        f.write("\n")
+        f.write(_format_successor_list(succs))
+        f.write("\n\n")
+        f.write("MATRIZ DE CUSTOS\n")
+        f.write("\n")
+        f.write(_format_cost_matrix(mat))
 
     # tabela de distâncias
     rows = []
@@ -229,12 +248,12 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
             }
         )
     df_dist = pd.DataFrame(rows)
-    dist_path = os.path.join(out_dir, f"sim{sim_id}_n{n}_distances.csv")
+    dist_path = os.path.join(out_dir, f"sim{sim_id}_{sim_name}_n{n}_distances.csv")
     df_dist.to_csv(dist_path, index=False, encoding="utf-8")
 
     # figuras
-    _save_plot_distance_hist(dist, os.path.join(fig_dir, f"sim{sim_id}_n{n}_hist.png"), f"Sim {sim_id} | n={n} | Histograma")
-    _save_plot_distance_by_vertex(dist, os.path.join(fig_dir, f"sim{sim_id}_n{n}_series.png"), f"Sim {sim_id} | n={n} | Distância por vértice")
+    _save_plot_distance_hist(dist, os.path.join(fig_dir, f"sim{sim_id}_{sim_name}_n{n}_hist.png"), f"Sim {sim_id} ({sim_name}) | n={n} | Histograma")
+    _save_plot_distance_by_vertex(dist, os.path.join(fig_dir, f"sim{sim_id}_{sim_name}_n{n}_series.png"), f"Sim {sim_id} ({sim_name}) | n={n} | Distância por vértice")
 
     # resumo
     e_stats = edge_stats(edges)
@@ -242,6 +261,7 @@ def run_simulation(sim_id: int, n: int, density: float, seed: int, out_dir: str,
 
     summary = {
         "sim_id": sim_id,
+        "sim_name": sim_name,
         "n": n,
         "density": density,
         "seed": seed,

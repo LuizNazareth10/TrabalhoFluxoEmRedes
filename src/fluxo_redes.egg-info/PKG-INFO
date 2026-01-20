@@ -8,6 +8,7 @@ Requires-Dist: numpy>=1.24
 Requires-Dist: pandas>=2.0
 Requires-Dist: matplotlib>=3.7
 Requires-Dist: reportlab>=4.0
+Requires-Dist: networkx>=3.2
 
 # Trabalho — Fluxo em Redes (Caminho Mínimo)
 
@@ -101,8 +102,9 @@ Observação: o mock não acessa internet; ele serve para reproduzir o fluxo de 
 
 Todas as simulações aceitam `--seed` para reprodutibilidade.
 
-Exemplo:
 
 ```bash
-python -m fluxo_redes.simulations --sim 2 --sizes 100 --density 0.2 --seed 123
+python -m fluxo_redes.simulations --all --sizes 10 100 --density 0.25 --seed 7 --out results --figures figures
+python -m fluxo_redes.report --results results --figures figures --out report
+
 ```
