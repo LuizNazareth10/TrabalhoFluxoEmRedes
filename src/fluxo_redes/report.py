@@ -31,18 +31,24 @@ def _safe_markdown_table(df: pd.DataFrame, max_rows: int = 20, max_col_width: in
     if len(df) > max_rows:
         df = df.head(max_rows)
 
-    def _fmt(v: object) -> str:
+    def _float_precision(col: str) -> int:
+        name = col.lower()
+        if "runtime" in name:
+            return 6
+        return 2
+
+    def _fmt(v: object, col: str) -> str:
         if pd.isna(v):
             return ""
         if isinstance(v, float):
-            return f"{v:.4f}"
+            return f"{v:.{_float_precision(col)}f}"
         s = str(v)
         if len(s) > max_col_width:
             return s[: max_col_width - 1] + "…"
         return s
 
     headers = [str(c) for c in df.columns]
-    rows = [[_fmt(v) for v in row] for row in df.values.tolist()]
+    rows = [[_fmt(v, col) for v, col in zip(row, headers)] for row in df.values.tolist()]
 
     widths = [len(h) for h in headers]
     for row in rows:
@@ -79,6 +85,12 @@ def _ensure_graph_viz(results_dir: str, figures_dir: str, sim_id: int, sim_name:
     if not os.path.exists(out_path):
         draw_graph(graph_json, out_path, layout="spring", seed=42)
     return out_path
+
+
+def _path_to_commas(path: object) -> str:
+    if not isinstance(path, str) or not path:
+        return "" if path is None else str(path)
+    return path.replace(" -> ", ",").replace("X", "x")
 
 
 def _analyze_run(summary_row: pd.Series, dist_df: pd.DataFrame) -> Dict[str, Any]:
@@ -135,21 +147,6 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
         "O projeto implementa três simulações de caminho mínimo a partir da raiz X1, "
         "com diferentes hipóteses sobre ciclos e sinais dos custos, e com representações distintas de grafo.\n"
     )
-
-    lines.append("### Resumo executivo dos resultados\n")
-    show_cols = [
-        "sim_id",
-        "sim_name",
-        "n",
-        "m",
-        "neg_edges",
-        "runtime_s",
-        "dist_reachable",
-        "dist_min",
-        "dist_mean",
-        "dist_max",
-    ]
-    lines.append(_safe_markdown_table(summary[show_cols].sort_values(["sim_id", "n"])) + "\n")
 
     # Discussão por sim
     sim_names = {
@@ -212,6 +209,14 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
                     "Valores mais altos sugerem maior heterogeneidade entre caminhos curtos e longos.\n"
                 )
 
+            # Foto do grafo
+            try:
+                graph_viz = _ensure_graph_viz(results_dir, figures_dir, int(sim_id), sim_name, n)
+                lines.append("Figura (grafo):\n")
+                lines.append(f"![]({graph_viz})\n")
+            except Exception as exc:
+                lines.append(f"Figura (grafo) indisponível: {exc}\n")
+
             if n <= 10:
                 lines.append("#### Ranking de distância (mais perto → mais longe)\n")
                 lines.append(_safe_markdown_table(ana["rank_all"], max_rows=n) + "\n")
@@ -220,23 +225,18 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
                 lines.append(_safe_markdown_table(ana["top_far"], max_rows=10) + "\n")
 
                 lines.append("#### Vértices mais próximos (top 10)\n")
-                lines.append(_safe_markdown_table(ana["top_close"], max_rows=10) + "\n")
+                if n == 100:
+                    top_close_fmt = ana["top_close"].copy()
+                    if "path" in top_close_fmt.columns:
+                        top_close_fmt["path"] = top_close_fmt["path"].map(_path_to_commas)
+                    lines.append(_safe_markdown_table(top_close_fmt, max_rows=10) + "\n")
+                else:
+                    lines.append(_safe_markdown_table(ana["top_close"], max_rows=10) + "\n")
 
-            # Referência às figuras
-            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
+            # Série por vértice
             series = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_series.png")
-            if os.path.exists(hist):
-                lines.append(f"Figura (histograma): `{hist}`\n")
             if os.path.exists(series):
                 lines.append(f"Figura (série por vértice): `{series}`\n")
-
-            # Visualização do grafo
-            try:
-                graph_viz = _ensure_graph_viz(results_dir, figures_dir, int(sim_id), sim_name, n)
-                lines.append("Figura (grafo):\n")
-                lines.append(f"![]({graph_viz})\n")
-            except Exception as exc:
-                lines.append(f"Figura (grafo) indisponível: {exc}\n")
 
             # Comentários interpretativos específicos
             if int(sim_id) == 1:
@@ -273,6 +273,21 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
         "tem custo proporcional a O(n+m).\n"
         "- A presença de arestas negativas (sem ciclos negativos) pode deslocar a distribuição de distâncias para valores menores e aumentar o espalhamento.\n"
     )
+
+    lines.append("## Resumo executivo dos resultados\n")
+    show_cols = [
+        "sim_id",
+        "sim_name",
+        "n",
+        "m",
+        "neg_edges",
+        "runtime_s",
+        "dist_reachable",
+        "dist_min",
+        "dist_mean",
+        "dist_max",
+    ]
+    lines.append(_safe_markdown_table(summary[show_cols].sort_values(["sim_id", "n"])) + "\n")
 
     # Parte 2 (linguagem generativa)
     lines.append("## Parte 2 — Linguagem generativa (prompts)\n")
@@ -328,6 +343,18 @@ def _df_to_reportlab_table(df: pd.DataFrame, max_rows: int = 30, font_size: int 
     if len(df) > max_rows:
         df = df.head(max_rows)
 
+    def _float_precision(col: str) -> int:
+        name = col.lower()
+        if "runtime" in name:
+            return 6
+        return 2
+
+    df = df.copy()
+    for col in df.columns:
+        if pd.api.types.is_float_dtype(df[col]):
+            prec = _float_precision(str(col))
+            df[col] = df[col].map(lambda v: f"{v:.{prec}f}" if pd.notna(v) else "")
+
     data = [list(df.columns)] + df.astype(str).values.tolist()
     t = Table(data, hAlign="LEFT")
     style_items = [
@@ -359,11 +386,6 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
     story.append(Paragraph(f"Gerado em {datetime.utcnow().isoformat()}Z", styles["Small"]))
     story.append(Spacer(1, 12))
 
-    story.append(Paragraph("Resumo executivo", styles["Heading2"]))
-    show_cols = ["sim_id", "sim_name", "n", "m", "neg_edges", "runtime_s", "dist_reachable", "dist_mean", "dist_max"]
-    story.append(_df_to_reportlab_table(summary[show_cols].sort_values(["sim_id", "n"]), max_rows=20))
-    story.append(Spacer(1, 12))
-
     sim_names = {
         1: "Simulação 1 — Bellman recursivo em DAG",
         2: "Simulação 2 — Dijkstra com Heap (Best-First)",
@@ -386,38 +408,12 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
             dist_df = _read_distances(results_dir, int(sim_id), sim_name, n)
             ana = _analyze_run(row, dist_df)
 
-            story.append(
-                Paragraph(
-                    f"Arestas m={ana['m']} (densidade efetiva {ana['eff_density']:.3f}), arestas negativas={int(row['neg_edges'])}. "
-                    f"Alcançáveis={ana['reachable']}/{ana['n']}. Tempo={float(row['runtime_s']):.6f}s.",
-                    styles["Small"],
-                )
-            )
+            story.append(Paragraph(f"• Arestas (m): {ana['m']} | densidade efetiva: {ana['eff_density']:.3f} | arestas negativas: {int(row['neg_edges'])}", styles["Small"]))
+            story.append(Paragraph(f"• Alcançáveis a partir de X1: {ana['reachable']}/{ana['n']}", styles["Small"]))
+            story.append(Paragraph(f"• Tempo de execução: {float(row['runtime_s']):.6f} s", styles["Small"]))
             story.append(Spacer(1, 8))
 
-            if n <= 10:
-                story.append(Paragraph("Ranking de distância (mais perto → mais longe)", styles["Heading3"]))
-                story.append(_df_to_reportlab_table(ana["rank_all"], max_rows=n))
-                story.append(Spacer(1, 8))
-            else:
-                font_size = 6 if n >= 100 else 8
-                story.append(Paragraph("Top 10 mais distantes", styles["Heading3"]))
-                story.append(_df_to_reportlab_table(ana["top_far"], max_rows=10, font_size=font_size, word_wrap=True))
-                story.append(Spacer(1, 8))
-
-                story.append(Paragraph("Top 10 mais próximos", styles["Heading3"]))
-                story.append(_df_to_reportlab_table(ana["top_close"], max_rows=10, font_size=font_size, word_wrap=True))
-                story.append(Spacer(1, 8))
-
-            # Figuras
-            hist = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_hist.png")
-            series = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_series.png")
-            for p in [hist, series]:
-                if os.path.exists(p):
-                    story.append(Image(p, width=500, height=250))
-                    story.append(Spacer(1, 6))
-
-            # Visualização do grafo
+            # Foto do grafo
             try:
                 graph_viz = _ensure_graph_viz(results_dir, figures_dir, int(sim_id), sim_name, n)
                 if os.path.exists(graph_viz):
@@ -425,6 +421,37 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
                     story.append(Spacer(1, 6))
             except Exception:
                 pass
+
+            if n <= 10:
+                story.append(Paragraph("Ranking de distância (mais perto → mais longe)", styles["Heading3"]))
+                story.append(_df_to_reportlab_table(ana["rank_all"], max_rows=n))
+                story.append(Spacer(1, 8))
+            else:
+                story.append(Paragraph("Top 10 mais distantes", styles["Heading3"]))
+                story.append(_df_to_reportlab_table(ana["top_far"], max_rows=10, font_size=8, word_wrap=True))
+                story.append(Spacer(1, 8))
+
+                story.append(Paragraph("Top 10 mais próximos", styles["Heading3"]))
+                if n == 100:
+                    top_close_fmt = ana["top_close"].copy()
+                    if "path" in top_close_fmt.columns:
+                        top_close_fmt["path"] = top_close_fmt["path"].map(_path_to_commas)
+                    story.append(_df_to_reportlab_table(top_close_fmt, max_rows=10, font_size=8, word_wrap=True))
+                else:
+                    story.append(_df_to_reportlab_table(ana["top_close"], max_rows=10, font_size=8, word_wrap=True))
+                story.append(Spacer(1, 8))
+
+            # Gráfico da série
+            series = os.path.join(figures_dir, f"sim{int(sim_id)}_{sim_name}_n{n}_series.png")
+            if os.path.exists(series):
+                story.append(Image(series, width=500, height=250))
+                story.append(Spacer(1, 6))
+
+    # Resumo executivo (ao final)
+    story.append(PageBreak())
+    story.append(Paragraph("Resumo executivo", styles["Heading1"]))
+    show_cols = ["sim_id", "sim_name", "n", "m", "neg_edges", "runtime_s", "dist_reachable", "dist_mean", "dist_max"]
+    story.append(_df_to_reportlab_table(summary[show_cols].sort_values(["sim_id", "n"]), max_rows=20))
 
     doc.build(story)
 
