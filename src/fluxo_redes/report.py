@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import os
 import json
+import re
 from datetime import datetime
 from typing import List, Dict, Any
 
@@ -71,6 +72,80 @@ def _effective_density(n: int, m: int) -> float:
 def _read_distances(results_dir: str, sim_id: int, sim_name: str, n: int) -> pd.DataFrame:
     path = os.path.join(results_dir, f"sim{sim_id}_{sim_name}_n{n}_distances.csv")
     return pd.read_csv(path)
+
+
+def _load_llm_results(results_dir: str) -> dict | None:
+    path = os.path.join(results_dir, "llm_results.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _parse_llm_key(key: str) -> tuple[int, str, int] | None:
+    m = re.match(r"sim(\d+)_(\w+)_n(\d+)_graph\.txt", key)
+    if not m:
+        return None
+    return int(m.group(1)), m.group(2), int(m.group(3))
+
+
+def _compare_llm_vs_alg(dist_df: pd.DataFrame, llm_vals: list[float], tol: float = 1e-6) -> dict:
+    alg_vals = dist_df["distance"].tolist()
+    n_alg = len(alg_vals)
+    n_llm = len(llm_vals)
+    n = min(n_alg, n_llm)
+    diffs = []
+    matches = 0
+    for i in range(n):
+        try:
+            dv = float(alg_vals[i])
+            lv = float(llm_vals[i])
+        except Exception:
+            continue
+        if not np.isfinite(dv) or not np.isfinite(lv):
+            continue
+        d = abs(dv - lv)
+        diffs.append(d)
+        if d <= tol:
+            matches += 1
+
+    mean_abs = float(np.mean(diffs)) if diffs else None
+    max_abs = float(np.max(diffs)) if diffs else None
+    return {
+        "n_alg": n_alg,
+        "n_llm": n_llm,
+        "matches": matches,
+        "compared": len(diffs),
+        "mean_abs_diff": mean_abs,
+        "max_abs_diff": max_abs,
+    }
+
+
+def _side_by_side_df(dist_df: pd.DataFrame, llm_vals: list[float]) -> pd.DataFrame:
+    alg_vals = dist_df["distance"].tolist()
+    n_alg = len(alg_vals)
+    n_llm = len(llm_vals)
+    n = min(n_alg, n_llm)
+    rows = []
+    for i in range(n):
+        try:
+            dv = float(alg_vals[i])
+        except Exception:
+            dv = np.nan
+        try:
+            lv = float(llm_vals[i])
+        except Exception:
+            lv = np.nan
+        diff = abs(dv - lv) if np.isfinite(dv) and np.isfinite(lv) else np.nan
+        rows.append(
+            {
+                "vertex": f"x{i+1}",
+                "alg_distance": dv,
+                "llm_distance": lv,
+                "abs_diff": diff,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def _graph_json_path(results_dir: str, sim_id: int, sim_name: str, n: int) -> str:
@@ -290,51 +365,61 @@ def generate_markdown_report(summary: pd.DataFrame, results_dir: str, figures_di
     lines.append(_safe_markdown_table(summary[show_cols].sort_values(["sim_id", "n"])) + "\n")
 
     # Parte 2 (linguagem generativa)
-    lines.append("## Parte 2 — Linguagem generativa (prompts)\n")
+
+    lines.append("### Parte 2 — Modelo utilizado e especificações\n")
     lines.append(
-        "O enunciado pede resolver os mesmos problemas com uma linguagem generativa, usando um prompt que solicite apenas: "
-        "'computar o caminho mínimo entre a raiz X1 e os demais vértices'.\n"
-        "No código, o módulo `fluxo_redes.llm_part2` gera prompts padronizados para cada representação, e inclui um modo de demonstração offline.\n"
+        "(ESCREVA AQUI)\n"
+        "- Modelo utilizado: GPT\n"
+        "- Versão/fornecedor: 5.2 Thinking\n"
+        "- Prompt final utilizado: Dado os grafos direcionados com vértices X1..Xn: (6 arquivos .txt anexados) calcule apenas o custo do caminho mínimo de X1 até todos os demais vértices Para cada um dos arquivos .txt anexados Devolva listas de n valores d(X1)..d(Xn), uma para cada arquivo .txt.\n"
+        "- Observações de execução: A LLM pensou por 2m e 37 segundos ao total para as 6 simulações\n"
+        "\n"
     )
 
-    lines.append("### Exemplos de prompt (modelos)\n")
+    lines.append("### Parte 2 — Comparação LLM vs algoritmos\n")
+    llm = _load_llm_results(results_dir)
+    if not llm:
+        lines.append("Arquivo results/llm_results.json não encontrado.\n")
+    else:
+        results = llm.get("results", {})
+        rows = []
+        for key, llm_vals in results.items():
+            parsed = _parse_llm_key(key)
+            if not parsed:
+                continue
+            sim_id, sim_name, n = parsed
+            dist_df = _read_distances(results_dir, sim_id, sim_name, n)
+            comp = _compare_llm_vs_alg(dist_df, llm_vals)
+            rows.append(
+                {
+                    "sim_id": sim_id,
+                    "sim_name": sim_name,
+                    "n": n,
+                    "n_alg": comp["n_alg"],
+                    "n_llm": comp["n_llm"],
+                    "matches": comp["matches"],
+                    "compared": comp["compared"],
+                    "mean_abs_diff": comp["mean_abs_diff"],
+                    "max_abs_diff": comp["max_abs_diff"],
+                }
+            )
 
-    lines.append("#### Simulação 1 (lista de antecessores)\n")
-    lines.append(
-        "```\n"
-        "Dado um grafo direcionado com vértices X1..Xn e a seguinte lista de antecessores (para cada Xi: lista de (Xj,custo Xj->Xi)),\n"
-        "calcule apenas o custo do caminho mínimo de X1 até todos os demais vértices.\n"
-        "Devolva uma lista de n valores d(X1)..d(Xn).\n"
-        "(sem explicações adicionais)\n\n"
-        "ENTRADA:\n"
-        "<cole aqui a lista de antecessores>\n"
-        "```\n"
-    )
+        if rows:
+            df_llm = pd.DataFrame(rows).sort_values(["sim_id", "n"])
+            lines.append(_safe_markdown_table(df_llm, max_rows=20) + "\n")
 
-    lines.append("#### Simulação 2 (lista de sucessores)\n")
-    lines.append(
-        "```\n"
-        "Dado um grafo direcionado com vértices X1..Xn e a seguinte lista de sucessores (para cada Xi: lista de (Xj,custo Xi->Xj)),\n"
-        "calcule apenas o custo do caminho mínimo de X1 até todos os demais vértices.\n"
-        "Devolva uma lista de n valores d(X1)..d(Xn).\n"
-        "(sem explicações adicionais)\n\n"
-        "ENTRADA:\n"
-        "<cole aqui a lista de sucessores>\n"
-        "```\n"
-    )
-
-    lines.append("#### Simulação 3 (matriz de custos)\n")
-    lines.append(
-        "```\n"
-        "Dado um grafo direcionado com vértices X1..Xn e a seguinte matriz de custos C (C[i][j] = custo Xi->Xj; use INF quando não existir arco),\n"
-        "calcule apenas o custo do caminho mínimo de X1 até todos os demais vértices.\n"
-        "Devolva a primeira linha da matriz final de distâncias (d(X1->X1)..d(X1->Xn)).\n"
-        "(sem explicações adicionais)\n\n"
-        "ENTRADA:\n"
-        "<cole aqui a matriz>\n"
-        "```\n"
-    )
-
+            # Distâncias lado a lado (algoritmo vs LLM)
+            for key, llm_vals in results.items():
+                parsed = _parse_llm_key(key)
+                if not parsed:
+                    continue
+                sim_id, sim_name, n = parsed
+                lines.append(f"#### Lado a lado — sim{sim_id} {sim_name} n={n}\n")
+                dist_df = _read_distances(results_dir, sim_id, sim_name, n)
+                side_df = _side_by_side_df(dist_df, llm_vals)
+                lines.append(_safe_markdown_table(side_df, max_rows=n) + "\n")
+        else:
+            lines.append("Nenhum resultado LLM válido encontrado em results/llm_results.json.\n")
 
     return "\n".join(lines)
 
@@ -446,6 +531,61 @@ def generate_pdf(summary: pd.DataFrame, results_dir: str, figures_dir: str, out_
             if os.path.exists(series):
                 story.append(Image(series, width=500, height=250))
                 story.append(Spacer(1, 6))
+
+    # Parte 2 — espaço reservado
+    story.append(PageBreak())
+    story.append(Paragraph("Parte 2 — Linguagem generativa (prompts)", styles["Heading1"]))
+    story.append(Paragraph("Modelo utilizado e especificações", styles["Heading2"]))
+    story.append(Paragraph("• Modelo utilizado: GPT", styles["BodyText"]))
+    story.append(Paragraph("• Versão/fornecedor: 5.2 Thinking", styles["BodyText"]))
+    story.append(Paragraph("• Prompt final utilizado:  Dado os grafos direcionados com vértices X1..Xn: (6 arquivos .txt anexados) calcule apenas o custo do caminho mínimo de X1 até todos os demais vértices Para cada um dos arquivos .txt anexados Devolva listas de n valores d(X1)..d(Xn), uma para cada arquivo .txt.", styles["BodyText"]))
+    story.append(Paragraph("• Observações de execução: A LLM pensou por 2m e 37 segundos ao total para as 6 simulações", styles["BodyText"]))
+
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("Comparação LLM vs algoritmos", styles["Heading2"]))
+    llm = _load_llm_results(results_dir)
+    if not llm:
+        story.append(Paragraph("Arquivo results/llm_results.json não encontrado.", styles["BodyText"]))
+    else:
+        results = llm.get("results", {})
+        rows = []
+        for key, llm_vals in results.items():
+            parsed = _parse_llm_key(key)
+            if not parsed:
+                continue
+            sim_id, sim_name, n = parsed
+            dist_df = _read_distances(results_dir, sim_id, sim_name, n)
+            comp = _compare_llm_vs_alg(dist_df, llm_vals)
+            rows.append(
+                {
+                    "sim_id": sim_id,
+                    "sim_name": sim_name,
+                    "n": n,
+                    "n_alg": comp["n_alg"],
+                    "n_llm": comp["n_llm"],
+                    "matches": comp["matches"],
+                    "compared": comp["compared"],
+                    "mean_abs_diff": comp["mean_abs_diff"],
+                    "max_abs_diff": comp["max_abs_diff"],
+                }
+            )
+
+        if rows:
+            df_llm = pd.DataFrame(rows).sort_values(["sim_id", "n"])
+            story.append(_df_to_reportlab_table(df_llm, max_rows=20, font_size=8, word_wrap=True))
+
+            for key, llm_vals in results.items():
+                parsed = _parse_llm_key(key)
+                if not parsed:
+                    continue
+                sim_id, sim_name, n = parsed
+                story.append(Spacer(1, 8))
+                story.append(Paragraph(f"Lado a lado — sim{sim_id} {sim_name} n={n}", styles["Heading3"]))
+                dist_df = _read_distances(results_dir, sim_id, sim_name, n)
+                side_df = _side_by_side_df(dist_df, llm_vals)
+                story.append(_df_to_reportlab_table(side_df, max_rows=n, font_size=7, word_wrap=True))
+        else:
+            story.append(Paragraph("Nenhum resultado LLM válido encontrado em results/llm_results.json.", styles["BodyText"]))
 
     # Resumo executivo (ao final)
     story.append(PageBreak())
